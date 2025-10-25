@@ -4,6 +4,60 @@ import { generateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Signup endpoint - Only for regular users (NOT admins)
+router.post('/signup', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Validate input
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and password are required'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ where: { email } });
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    // Create new user - ALWAYS as 'user' role (never admin)
+    const newUser = await User.create({
+      name,
+      email,
+      password,
+      role: 'user', // Force user role only
+      isActive: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed',
+      error: error.message
+    });
+  }
+});
+
 // Login endpoint
 router.post('/login', async (req, res) => {
   try {

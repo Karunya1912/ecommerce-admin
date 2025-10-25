@@ -15,10 +15,10 @@ import AdminJSExpress from '@adminjs/express';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// AdminJS setup (must be before body-parser)
-const admin = new AdminJS(adminOptions);
+// Serve static files from public directory
+app.use(express.static('public'));
 
-// Session store for AdminJS
+// Session store setup
 const PgSession = ConnectPgSimple(session);
 const adminSessionStore = new PgSession({
   conString: process.env.DATABASE_URL,
@@ -26,31 +26,45 @@ const adminSessionStore = new PgSession({
   createTableIfMissing: true,
 });
 
-// Session configuration
-const sessionOptions = {
-  store: adminSessionStore,
-  resave: false,
-  saveUninitialized: false,
-  secret: process.env.JWT_SECRET,
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  },
-  name: 'adminjs',
+// Unified authentication - accepts both admin and user roles
+const unifiedAuthenticate = async (email, password) => {
+  const user = await authenticate(email, password);
+  if (user) {
+    console.log(`✅ User logged in: ${user.email} (Role: ${user.role})`);
+    return user;
+  }
+  return null;
 };
 
-// Build authenticated router
+// Setup Unified Panel (for both admins and users)
+const admin = new AdminJS(adminOptions);
 const adminRouter = AdminJSExpress.buildAuthenticatedRouter(
   admin,
   {
-    authenticate,
+    authenticate: unifiedAuthenticate,
     cookiePassword: process.env.JWT_SECRET,
   },
   null,
-  sessionOptions
+  {
+    store: adminSessionStore,
+    resave: false,
+    saveUninitialized: false,
+    secret: process.env.JWT_SECRET,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000,
+    },
+    name: 'adminjs',
+  }
 );
 
+// Redirect AdminJS login to custom login page
+app.get(`${admin.options.rootPath}/login`, (_req, res) => {
+  res.redirect('/login.html');
+});
+
+// Mount the unified panel
 app.use(admin.options.rootPath, adminRouter);
 
 // Session configuration for API routes
@@ -80,16 +94,9 @@ app.use('/api', sessionMiddleware);
 app.use('/api', authRoutes);
 app.use('/api', dashboardRoutes);
 
-// Home route
-app.get('/', (req, res) => {
-  res.json({
-    message: 'eCommerce Admin API',
-    endpoints: {
-      admin: admin.options.rootPath,
-      login: '/api/login',
-      logout: '/api/logout',
-    },
-  });
+// Home route - redirect to login page
+app.get('/', (_req, res) => {
+  res.redirect('/login.html');
 });
 
 // Database sync and server start
@@ -118,10 +125,14 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-      console.log(`📊 AdminJS available at http://localhost:${PORT}${admin.options.rootPath}`);
-      console.log(`\n👤 Admin Login:`);
-      console.log(`   Email: ${process.env.ADMIN_EMAIL}`);
-      console.log(`   Password: ${process.env.ADMIN_PASSWORD}\n`);
+      console.log(`\n🎨 CUSTOM LOGIN PAGE: http://localhost:${PORT}/login.html`);
+      console.log(`📝 SIGNUP PAGE: http://localhost:${PORT}/signup.html`);
+      console.log(`📊 ADMIN PANEL: http://localhost:${PORT}${admin.options.rootPath}`);
+      console.log(`\n   Test Credentials:`);
+      console.log(`   👤 Admin: ${process.env.ADMIN_EMAIL} / ${process.env.ADMIN_PASSWORD}`);
+      console.log(`   👤 User:  user@example.com / user123 (run 'npm run create-user')`);
+      console.log(`\n   💡 Different roles see different sidebars!`);
+      console.log(`   📱 Try the new attractive login/signup pages!\n`);
     });
   } catch (error) {
     console.error('❌ Unable to start server:', error);

@@ -1,5 +1,6 @@
 import AdminJS from 'adminjs';
 import * as AdminJSSequelize from '@adminjs/sequelize';
+import { componentLoader, Components } from './component-loader.js';
 import {
   User,
   Category,
@@ -51,9 +52,11 @@ const userResourceOptions = {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
       show: {
-        isAccessible: true,
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
     },
+    // Hide Users resource from regular users
+    isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
   },
 };
 
@@ -61,13 +64,35 @@ const userResourceOptions = {
 const categoryResourceOptions = {
   resource: Category,
   options: {
-    navigation: {
-      name: 'Product Management',
-      icon: 'Tag',
+    navigation: ({ currentAdmin }) => {
+      if (currentAdmin && currentAdmin.role === 'admin') {
+        return {
+          name: 'Product Management',
+          icon: 'Tag',
+        };
+      }
+      return false; // Hide from user sidebar
     },
     properties: {
       slug: {
         isVisible: { list: true, filter: true, show: true, edit: false },
+      },
+    },
+    actions: {
+      new: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      edit: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      delete: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      list: {
+        isAccessible: true,
+      },
+      show: {
+        isAccessible: true,
       },
     },
   },
@@ -77,9 +102,19 @@ const categoryResourceOptions = {
 const productResourceOptions = {
   resource: Product,
   options: {
-    navigation: {
-      name: 'Product Management',
-      icon: 'ShoppingCart',
+    navigation: ({ currentAdmin }) => {
+      if (currentAdmin && currentAdmin.role === 'admin') {
+        return {
+          name: 'Product Management',
+          icon: 'ShoppingCart',
+        };
+      } else if (currentAdmin && currentAdmin.role === 'user') {
+        return {
+          name: null, // Top level in sidebar
+          icon: 'ShoppingCart',
+        };
+      }
+      return false;
     },
     properties: {
       categoryId: {
@@ -89,6 +124,23 @@ const productResourceOptions = {
         isVisible: true,
       },
     },
+    actions: {
+      new: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      edit: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      delete: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      list: {
+        isAccessible: true,
+      },
+      show: {
+        isAccessible: true,
+      },
+    },
   },
 };
 
@@ -96,19 +148,54 @@ const productResourceOptions = {
 const orderResourceOptions = {
   resource: Order,
   options: {
-    navigation: {
-      name: 'Order Management',
-      icon: 'Package',
+    navigation: ({ currentAdmin }) => {
+      if (currentAdmin && currentAdmin.role === 'admin') {
+        return {
+          name: 'Order Management',
+          icon: 'Package',
+        };
+      } else if (currentAdmin && currentAdmin.role === 'user') {
+        return {
+          name: null, // Top level  in sidebar
+          icon: 'Package',
+        };
+      }
+      return false;
     },
     properties: {
       userId: {
-        isVisible: false,
+        isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
       user: {
-        isVisible: true,
+        isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
       orderNumber: {
         isVisible: { list: true, filter: true, show: true, edit: false },
+      },
+    },
+    actions: {
+      new: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'user',
+      },
+      edit: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      delete: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      list: {
+        isAccessible: true, // All users can view their orders
+        before: async (request, { currentAdmin }) => {
+          // Normal users can only see their own orders
+          if (currentAdmin.role === 'user') {
+            if (!request.query) request.query = {};
+            request.query['filters.userId'] = currentAdmin.id;
+          }
+          return request;
+        },
+      },
+      show: {
+        isAccessible: true, // All users can view details
       },
     },
   },
@@ -139,6 +226,25 @@ const orderItemResourceOptions = {
         isVisible: { list: true, filter: true, show: true, edit: false },
       },
     },
+    actions: {
+      new: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      edit: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      delete: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      list: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      show: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+    },
+    // Hide OrderItems from regular users
+    isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
   },
 };
 
@@ -155,6 +261,7 @@ const settingResourceOptions = {
 };
 
 const adminOptions = {
+  componentLoader,
   resources: [
     userResourceOptions,
     categoryResourceOptions,
@@ -163,11 +270,51 @@ const adminOptions = {
     orderItemResourceOptions,
     settingResourceOptions,
   ],
+  pages: {
+    adminDashboard: {
+      label: 'Admin Dashboard',
+      icon: 'Dashboard',
+      component: Components.AdminDashboard,
+      isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+    },
+    userDashboard: {
+      label: 'User Dashboard',
+      icon: 'Home',
+      component: Components.UserDashboard,
+      isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'user',
+    },
+    settingsPage: {
+      label: 'Settings Page',
+      icon: 'Settings',
+      component: Components.SettingsPage,
+      isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+    },
+  },
+  dashboard: {
+    handler: async (_request, _response, context) => {
+      const { currentAdmin } = context;
+      if (currentAdmin.role === 'admin') {
+        return {
+          message: 'Welcome to Admin Dashboard',
+          user: currentAdmin,
+        };
+      } else {
+        return {
+          message: 'Welcome to User Dashboard',
+          user: currentAdmin,
+        };
+      }
+    },
+  },
   rootPath: '/admin',
   branding: {
     companyName: 'eCommerce Admin',
     logo: false,
     softwareBrothers: false,
+    withMadeWithLove: false,
+  },
+  assets: {
+    styles: ['/admin-custom.css'],
   },
 };
 
