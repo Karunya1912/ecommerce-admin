@@ -89,12 +89,14 @@ const categoryResourceOptions = {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
       list: {
-        isAccessible: true,
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
       show: {
-        isAccessible: true,
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
     },
+    // Hide entire resource from users
+    isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
   },
 };
 
@@ -110,7 +112,7 @@ const productResourceOptions = {
         };
       } else if (currentAdmin && currentAdmin.role === 'user') {
         return {
-          name: null, // Top level in sidebar
+          name: 'Navigation',
           icon: 'ShoppingCart',
         };
       }
@@ -156,7 +158,7 @@ const orderResourceOptions = {
         };
       } else if (currentAdmin && currentAdmin.role === 'user') {
         return {
-          name: null, // Top level  in sidebar
+          name: 'Navigation',
           icon: 'Package',
         };
       }
@@ -257,6 +259,7 @@ const settingResourceOptions = {
       icon: 'Settings',
     },
     isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+    isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
   },
 };
 
@@ -271,40 +274,13 @@ const adminOptions = {
     settingResourceOptions,
   ],
   pages: {
-    adminDashboard: {
-      label: 'Admin Dashboard',
-      icon: 'Dashboard',
-      component: Components.AdminDashboard,
-      isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
-    },
-    userDashboard: {
-      label: 'User Dashboard',
-      icon: 'Home',
-      component: Components.UserDashboard,
-      isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'user',
-    },
-    settingsPage: {
-      label: 'Settings Page',
-      icon: 'Settings',
-      component: Components.SettingsPage,
-      isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+    'product-catalog': {
+      component: Components.ProductCatalog,
+      icon: 'ShoppingCart',
     },
   },
   dashboard: {
-    handler: async (_request, _response, context) => {
-      const { currentAdmin } = context;
-      if (currentAdmin.role === 'admin') {
-        return {
-          message: 'Welcome to Admin Dashboard',
-          user: currentAdmin,
-        };
-      } else {
-        return {
-          message: 'Welcome to User Dashboard',
-          user: currentAdmin,
-        };
-      }
-    },
+    component: Components.UserDashboard,
   },
   rootPath: '/admin',
   branding: {
@@ -312,6 +288,7 @@ const adminOptions = {
     logo: false,
     softwareBrothers: false,
     withMadeWithLove: false,
+    favicon: false,
   },
   assets: {
     styles: ['/admin-custom.css'],
