@@ -74,7 +74,21 @@ const sessionStore = new PgSession({
   createTableIfMissing: true,
 });
 
-const sessionMiddleware = session({
+// Create AdminJS session middleware to share with API routes
+const adminJsSessionMiddleware = session({
+  store: adminSessionStore,
+  secret: process.env.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000,
+  },
+  name: 'adminjs', // Same session name as AdminJS
+});
+
+const apiSessionMiddleware = session({
   store: sessionStore,
   secret: process.env.JWT_SECRET,
   resave: false,
@@ -87,10 +101,16 @@ const sessionMiddleware = session({
   name: 'api.sid', // Different name for API session
 });
 
-// Apply body parser and session only to API routes (not AdminJS)
+// Apply body parser and session to API routes
 app.use('/api', express.json());
 app.use('/api', express.urlencoded({ extended: true }));
-app.use('/api', sessionMiddleware);
+
+// Use AdminJS session for dashboard stats (same session as admin panel)
+app.use('/api/dashboard-stats', adminJsSessionMiddleware);
+
+// Use separate session for other API routes
+app.use('/api', apiSessionMiddleware);
+
 app.use('/api', authRoutes);
 app.use('/api', dashboardRoutes);
 

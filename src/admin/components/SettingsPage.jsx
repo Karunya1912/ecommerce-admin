@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Box, H3, H5, Text, Button, Loader, MessageBox } from '@adminjs/design-system';
+import { useEffect, useState } from 'react';
+import { Box, H3, Text, Button, Loader, MessageBox } from '@adminjs/design-system';
 import { ApiClient } from 'adminjs';
 
 const api = new ApiClient();
@@ -38,7 +38,17 @@ const SettingsPage = () => {
 
   return (
     <Box>
-      <H3 mb="xl">System Settings</H3>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb="xl">
+        <H3>Settings</H3>
+        <Button
+          as="a"
+          href="/admin/resources/Setting/actions/new"
+          variant="primary"
+          size="sm"
+        >
+          Add New Setting
+        </Button>
+      </Box>
 
       {message && (
         <MessageBox
@@ -49,94 +59,89 @@ const SettingsPage = () => {
         />
       )}
 
-      <Box variant="white" p="xl" border="default" borderRadius="lg">
-        <H5 mb="default">Configuration Settings</H5>
-        <Text fontSize="sm" color="grey80" mb="xl">
-          Manage your system configuration key-value pairs. These settings control
-          various aspects of your eCommerce application.
-        </Text>
-
+      <Box variant="white" p="xxl" borderRadius="lg">
         {settings.length === 0 ? (
-          <Text fontSize="sm" color="grey60">
-            No settings configured yet. Add settings from the Settings resource.
-          </Text>
+          <Box textAlign="center" py="xxl">
+            <Text fontSize="lg" color="grey60" mb="lg">
+              No settings configured
+            </Text>
+            <Button
+              as="a"
+              href="/admin/resources/Setting/actions/new"
+              variant="primary"
+            >
+              Create First Setting
+            </Button>
+          </Box>
         ) : (
           <Box>
             {settings.map((setting) => (
               <Box
                 key={setting.id}
-                p="default"
-                mb="default"
+                p="lg"
+                mb="lg"
                 border="default"
                 borderRadius="default"
-                bg="grey20"
+                bg="white"
+                style={{
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s'
+                }}
               >
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Text fontWeight="bold" fontSize="default">
-                      {setting.params.key}
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                  <Box flex="1">
+                    <Box display="flex" alignItems="center" mb="sm">
+                      <Text fontWeight="bold" fontSize="lg" mr="default">
+                        {setting.params.key}
+                      </Text>
+                      <Box
+                        px="default"
+                        py="sm"
+                        bg="grey20"
+                        borderRadius="default"
+                        mr="sm"
+                      >
+                        <Text fontSize="xs" color="grey80">
+                          {setting.params.type}
+                        </Text>
+                      </Box>
+                      {setting.params.isPublic && (
+                        <Box
+                          px="default"
+                          py="sm"
+                          bg="primary"
+                          borderRadius="default"
+                        >
+                          <Text fontSize="xs" color="white">
+                            Public
+                          </Text>
+                        </Box>
+                      )}
+                    </Box>
+                    <Text fontSize="sm" color="grey60" mb="default">
+                      {setting.params.description}
                     </Text>
-                    <Text fontSize="sm" color="grey60" mt="sm">
-                      {setting.params.description || 'No description'}
-                    </Text>
-                    <Text fontSize="sm" color="grey80" mt="sm">
-                      Value: <strong>{setting.params.value}</strong>
-                    </Text>
-                    <Text fontSize="xs" color="grey60" mt="sm">
-                      Type: {setting.params.type} | Public: {setting.params.isPublic ? 'Yes' : 'No'}
-                    </Text>
+                    <Box p="default" bg="grey20" borderRadius="default" mt="default">
+                      <Text fontSize="sm" fontFamily="monospace" color="grey100">
+                        {setting.params.value}
+                      </Text>
+                    </Box>
+                  </Box>
+                  <Box ml="lg">
+                    <Button
+                      as="a"
+                      href={`/admin/resources/Setting/records/${setting.id}/edit`}
+                      variant="light"
+                      size="sm"
+                    >
+                      Edit
+                    </Button>
                   </Box>
                 </Box>
               </Box>
             ))}
           </Box>
         )}
-
-        <Box mt="xl">
-          <Button
-            as="a"
-            href="/admin/resources/Setting"
-            variant="primary"
-          >
-            Manage Settings
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Settings Categories */}
-      <Box variant="white" mt="xl" p="xl" border="default" borderRadius="lg">
-        <H5 mb="default">Setting Categories</H5>
-        <Box
-          display="grid"
-          gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))"
-          gridGap="default"
-          mt="default"
-        >
-          <Box p="default" border="default" borderRadius="default">
-            <Text fontWeight="bold" fontSize="sm">General</Text>
-            <Text fontSize="xs" color="grey60" mt="sm">
-              Site name, logo, contact info
-            </Text>
-          </Box>
-          <Box p="default" border="default" borderRadius="default">
-            <Text fontWeight="bold" fontSize="sm">Email</Text>
-            <Text fontSize="xs" color="grey60" mt="sm">
-              SMTP, notification settings
-            </Text>
-          </Box>
-          <Box p="default" border="default" borderRadius="default">
-            <Text fontWeight="bold" fontSize="sm">Payment</Text>
-            <Text fontSize="xs" color="grey60" mt="sm">
-              Payment gateway configs
-            </Text>
-          </Box>
-          <Box p="default" border="default" borderRadius="default">
-            <Text fontWeight="bold" fontSize="sm">Shipping</Text>
-            <Text fontSize="xs" color="grey60" mt="sm">
-              Shipping methods, rates
-            </Text>
-          </Box>
-        </Box>
       </Box>
     </Box>
   );
