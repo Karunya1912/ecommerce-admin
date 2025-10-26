@@ -173,12 +173,13 @@ const orderResourceOptions = {
       name: 'Navigation',
       icon: 'Package',
     },
+    listProperties: ['id', 'orderNumber', 'totalAmount', 'status', 'paymentStatus', 'createdAt'],
     properties: {
       userId: {
-        isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+        isVisible: false,
       },
       user: {
-        isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+        isVisible: false, // Hidden from list view
       },
       orderNumber: {
         isVisible: { list: true, filter: true, show: true, edit: false },
@@ -196,6 +197,13 @@ const orderResourceOptions = {
     actions: {
       new: {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'user',
+        before: async (request, context) => {
+          // For regular users, automatically set the userId to current user
+          if (context.currentAdmin && context.currentAdmin.role === 'user' && request.payload) {
+            request.payload.userId = context.currentAdmin.id;
+          }
+          return request;
+        },
       },
       edit: {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
@@ -205,9 +213,33 @@ const orderResourceOptions = {
       },
       list: {
         isAccessible: () => true,
+        before: async (request, context) => {
+          // For regular users, filter to show only their own orders
+          // For admins, show all orders
+          const { currentAdmin } = context;
+          if (currentAdmin && currentAdmin.role === 'user') {
+            if (!request.query) request.query = {};
+            request.query['filters.userId'] = currentAdmin.id;
+          }
+          // Admin sees all orders (no filter applied)
+          return request;
+        },
       },
       show: {
-        isAccessible: () => true, // All users can view details
+        isAccessible: () => true,
+        before: async (request, context) => {
+          // For regular users, verify order belongs to them
+          // For admins, allow viewing any order
+          const { currentAdmin } = context;
+          if (currentAdmin && currentAdmin.role === 'user') {
+            const orderId = request.params.recordId;
+            const order = await Order.findByPk(orderId);
+            if (order && order.userId !== currentAdmin.id) {
+              throw new Error('Access denied: This order does not belong to you');
+            }
+          }
+          return request;
+        },
       },
     },
   },
