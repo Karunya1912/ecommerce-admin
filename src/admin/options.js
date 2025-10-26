@@ -26,16 +26,23 @@ const userResourceOptions = {
     },
     properties: {
       password: {
-        isVisible: false,
+        type: 'password',
+        isVisible: {
+          list: false,
+          filter: false,
+          show: false,
+          edit: true,
+          new: true
+        },
       },
       createdAt: {
         isVisible: { list: true, filter: true, show: true, edit: false },
       },
       updatedAt: {
-        isVisible: { list: true, filter: true, show: true, edit: false },
+        isVisible: { list: false, filter: false, show: true, edit: false },
       },
       lastLogin: {
-        isVisible: { list: true, filter: true, show: true, edit: false },
+        isVisible: { list: false, filter: false, show: true, edit: false },
       },
     },
     actions: {
@@ -44,6 +51,13 @@ const userResourceOptions = {
       },
       edit: {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+        before: async (request) => {
+          // For edit, remove password from payload if empty
+          if (request.payload && request.payload.password === '') {
+            delete request.payload.password;
+          }
+          return request;
+        },
       },
       delete: {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
@@ -64,18 +78,19 @@ const userResourceOptions = {
 const categoryResourceOptions = {
   resource: Category,
   options: {
-    navigation: ({ currentAdmin }) => {
-      if (currentAdmin && currentAdmin.role === 'admin') {
-        return {
-          name: 'Product Management',
-          icon: 'Tag',
-        };
-      }
-      return false; // Hide from user sidebar
+    navigation: {
+      name: 'Navigation',
+      icon: 'Tag',
     },
     properties: {
       slug: {
+        isVisible: { list: false, filter: true, show: true, edit: false },
+      },
+      createdAt: {
         isVisible: { list: true, filter: true, show: true, edit: false },
+      },
+      updatedAt: {
+        isVisible: { list: false, filter: false, show: true, edit: false },
       },
     },
     actions: {
@@ -89,14 +104,12 @@ const categoryResourceOptions = {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
       list: {
-        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+        isAccessible: () => true,
       },
       show: {
-        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+        isAccessible: () => true,
       },
     },
-    // Hide entire resource from users
-    isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
   },
 };
 
@@ -104,26 +117,32 @@ const categoryResourceOptions = {
 const productResourceOptions = {
   resource: Product,
   options: {
-    navigation: ({ currentAdmin }) => {
-      if (currentAdmin && currentAdmin.role === 'admin') {
-        return {
-          name: 'Product Management',
-          icon: 'ShoppingCart',
-        };
-      } else if (currentAdmin && currentAdmin.role === 'user') {
-        return {
-          name: 'Navigation',
-          icon: 'ShoppingCart',
-        };
-      }
-      return false;
+    navigation: {
+      name: 'Navigation',
+      icon: 'ShoppingCart',
     },
+    listProperties: ['id', 'name', 'categoryId', 'price', 'stock', 'isActive', 'createdAt'],
     properties: {
       categoryId: {
-        isVisible: false,
+        isVisible: { list: true, filter: true, show: true, edit: true },
       },
       category: {
-        isVisible: true,
+        isVisible: false,
+      },
+      imageUrl: {
+        isVisible: { list: false, filter: false, show: true, edit: true },
+      },
+      description: {
+        isVisible: { list: false, filter: false, show: true, edit: true },
+      },
+      sku: {
+        isVisible: { list: false, filter: true, show: true, edit: true },
+      },
+      createdAt: {
+        isVisible: { list: true, filter: true, show: true, edit: false },
+      },
+      updatedAt: {
+        isVisible: { list: false, filter: false, show: true, edit: false },
       },
     },
     actions: {
@@ -137,10 +156,10 @@ const productResourceOptions = {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
       list: {
-        isAccessible: true,
+        isAccessible: () => true,
       },
       show: {
-        isAccessible: true,
+        isAccessible: () => true,
       },
     },
   },
@@ -150,19 +169,9 @@ const productResourceOptions = {
 const orderResourceOptions = {
   resource: Order,
   options: {
-    navigation: ({ currentAdmin }) => {
-      if (currentAdmin && currentAdmin.role === 'admin') {
-        return {
-          name: 'Order Management',
-          icon: 'Package',
-        };
-      } else if (currentAdmin && currentAdmin.role === 'user') {
-        return {
-          name: 'Navigation',
-          icon: 'Package',
-        };
-      }
-      return false;
+    navigation: {
+      name: 'Navigation',
+      icon: 'Package',
     },
     properties: {
       userId: {
@@ -173,6 +182,15 @@ const orderResourceOptions = {
       },
       orderNumber: {
         isVisible: { list: true, filter: true, show: true, edit: false },
+      },
+      notes: {
+        isVisible: { list: false, filter: false, show: true, edit: true },
+      },
+      createdAt: {
+        isVisible: { list: true, filter: true, show: true, edit: false },
+      },
+      updatedAt: {
+        isVisible: { list: false, filter: false, show: true, edit: false },
       },
     },
     actions: {
@@ -186,18 +204,10 @@ const orderResourceOptions = {
         isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
       },
       list: {
-        isAccessible: true, // All users can view their orders
-        before: async (request, { currentAdmin }) => {
-          // Normal users can only see their own orders
-          if (currentAdmin.role === 'user') {
-            if (!request.query) request.query = {};
-            request.query['filters.userId'] = currentAdmin.id;
-          }
-          return request;
-        },
+        isAccessible: () => true,
       },
       show: {
-        isAccessible: true, // All users can view details
+        isAccessible: () => true, // All users can view details
       },
     },
   },
@@ -211,21 +221,28 @@ const orderItemResourceOptions = {
       name: 'Order Management',
       icon: 'List',
     },
+    listProperties: ['id', 'orderId', 'productId', 'quantity', 'price', 'subtotal', 'createdAt'],
     properties: {
       orderId: {
-        isVisible: false,
-      },
-      productId: {
-        isVisible: false,
-      },
-      order: {
         isVisible: true,
       },
-      product: {
+      productId: {
+        isVisible: true,
+      },
+      quantity: {
+        isVisible: true,
+      },
+      price: {
         isVisible: true,
       },
       subtotal: {
         isVisible: { list: true, filter: true, show: true, edit: false },
+      },
+      createdAt: {
+        isVisible: { list: true, filter: true, show: true, edit: false },
+      },
+      updatedAt: {
+        isVisible: { list: false, filter: false, show: true, edit: false },
       },
     },
     actions: {
@@ -258,6 +275,58 @@ const settingResourceOptions = {
       name: 'Configuration',
       icon: 'Settings',
     },
+    properties: {
+      id: {
+        isVisible: { list: false, filter: false, show: true, edit: false, new: false },
+      },
+      key: {
+        isVisible: true,
+        isRequired: true,
+      },
+      value: {
+        isVisible: true,
+        type: 'textarea',
+      },
+      description: {
+        isVisible: true,
+      },
+      type: {
+        isVisible: true,
+        availableValues: [
+          { value: 'string', label: 'String' },
+          { value: 'number', label: 'Number' },
+          { value: 'boolean', label: 'Boolean' },
+          { value: 'json', label: 'JSON' }
+        ],
+      },
+      isPublic: {
+        isVisible: true,
+      },
+      createdAt: {
+        isVisible: { list: false, filter: false, show: true, edit: false, new: false },
+      },
+      updatedAt: {
+        isVisible: { list: false, filter: false, show: true, edit: false, new: false },
+      },
+    },
+    listProperties: ['key', 'value', 'type', 'isPublic'],
+    actions: {
+      new: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      edit: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      delete: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      list: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+      show: {
+        isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
+      },
+    },
     isAccessible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
     isVisible: ({ currentAdmin }) => currentAdmin && currentAdmin.role === 'admin',
   },
@@ -265,6 +334,9 @@ const settingResourceOptions = {
 
 const adminOptions = {
   componentLoader,
+  dashboard: {
+    component: Components.Dashboard,
+  },
   resources: [
     userResourceOptions,
     categoryResourceOptions,
@@ -273,15 +345,7 @@ const adminOptions = {
     orderItemResourceOptions,
     settingResourceOptions,
   ],
-  pages: {
-    'product-catalog': {
-      component: Components.ProductCatalog,
-      icon: 'ShoppingCart',
-    },
-  },
-  dashboard: {
-    component: Components.UserDashboard,
-  },
+  pages: {},
   rootPath: '/admin',
   branding: {
     companyName: 'eCommerce Admin',

@@ -7,6 +7,9 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "create-user": "node create-regular-user.js",
+    "seed": "node seed-database.js",
+    "seed-settings": "node seed-settings.js",
+    "check-db": "node check-db.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
